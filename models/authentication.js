@@ -20,24 +20,13 @@ var UserSchema = new mongoose.Schema({
   passwordConf: {
     type: String,
     required: true,
+  },
+  created_date: {
+    type: Date,
+    default: Date.now,
+    required: true,
   }
-});
-UserSchema.pre('save', function (next) {
-  var user = this;
-  bcrypt.hash(user.password, 10, function (err, hash){
-    if (err) {
-      return next(err);
-    }
-    user.password = hash;
-    next();
-  })
-  bcrypt.hash(user.passwordConf, 10, function (err, hash){
-    if (err) {
-      return next(err);
-    }
-    user.passwordConf = hash;
-    next();
-  })
-});
+}, { collection: 'users' });
+
 var User = mongoose.model('User', UserSchema);
 module.exports = User;
