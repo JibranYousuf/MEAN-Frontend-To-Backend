@@ -11,7 +11,8 @@ let newUser = new User({
     name: req.body.name,
     email: req.body.email,
     username: req.body.username,
-    password: req.body.password
+    password: req.body.password,
+    userType: req.body.userType
 });
     User.addUser(newUser, (err, user)=>{
         if(err){
@@ -49,19 +50,21 @@ router.post('/authenticate', (req,res) =>{
                     name: user.name,
                     username: user.username,
                     email: user.email,
-                    password: user.password
+                    password: user.password,
+                    userType: user.userType
                 };
                 const token = jwt.sign(payload, config.secret, {
                     expiresIn: 604800  //1 week
                 });
                 return res.json({
                     success: true,
-                    token: 'JWT '+ token,
+                    token: 'bearer '+ token,
                     user: {
                         id: user._id,
                         name: user.name,
                         username: user.username,
-                        email : user.email
+                        email : user.email,
+                        userType : user.userType,
                     }
                 });
             } else {
@@ -72,8 +75,55 @@ router.post('/authenticate', (req,res) =>{
 });
 
 //Profile
-router.get('/profile', (req,res,next) =>{
-    res.send('PROFILE');
+router.get('/profile', passport.authenticate('jwt', {session:false}), (req, res, next) => {
+    res.json({user: req.user});
+  });
+
+router.get('/getall', (req, res, next) => {
+    User.find({}, function(err, user) {
+      var userMap = {};
+  
+      user.forEach(function(user) {
+        userMap[user._id] = user;
+      });
+  
+      res.send(userMap); 
+      console.log("These are the lists of all users in your database ", userMap) 
+    });
+});
+
+router.get('/getuser', function (req, res, next) {
+      
+    User.findOne({ username: req.query.username },function (err, user) {
+        if (err) {
+            console.log("username err", err)
+            return res.status(500).send(err)
+            // return err
+        }
+        if(user.username !== req.query.username){
+            return res.status(404).send('username invalid');
+          }
+          console.log("You are Successfully Searched: Welcome ", user.username)
+          console.log("User_id: ", user._id)
+          console.log("User Password: ", user.password)
+          console.log("You created account on: ", user.userType)
+               return res.status(200).send(user);
+  });
+})
+
+router.put('/update/:_id', function (req, res, next) {
+      
+    User.findByIdAndUpdate(req.params._id, req.body, {new: true}, function (err, user) {
+        if (err) return res.status(500).send("There was a problem updating the user.");
+        res.status(200).send(user);
+  });
+});
+
+router.delete('/delete/:id', function (req, res) {
+    User.findByIdAndRemove(req.params.id, function (err, user) {
+        if (err) return res.status(500).send("There was a problem deleting the user.");
+        res.status(200).send("User "+ user.username +" was deleted.");
+  });
 });
 
 module.exports = router;
